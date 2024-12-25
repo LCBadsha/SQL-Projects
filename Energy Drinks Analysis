@@ -1,0 +1,133 @@
+-- Switch to the database
+SHOW DATABASES;
+USE codex;
+
+-- 1. Who prefers energy drinks more?
+WITH cte AS (
+    SELECT dr.gender, COUNT(dr.respondent_id) AS gender_count
+    FROM fact_survey_responses fsr
+    JOIN dim_repondents dr ON fsr.respondent_id = dr.respondent_id
+    GROUP BY dr.gender
+),
+cte1 AS (
+    SELECT 
+        gender_count, 
+        ROUND((gender_count / (SELECT COUNT(respondent_id) FROM dim_repondents) * 100), 2) AS gender_percentage
+    FROM cte
+)
+SELECT gender_count, gender_percentage
+FROM cte1;
+
+-- 2. Which age group prefers energy drinks more?
+WITH age AS (
+    SELECT dr.age, COUNT(fsr.respondent_id) AS age_count
+    FROM fact_survey_responses fsr 
+    JOIN dim_repondents dr ON fsr.respondent_id = dr.respondent_id
+    GROUP BY dr.age
+),
+age1 AS (
+    SELECT 
+        age, 
+        age_count, 
+        ROUND((age_count / (SELECT COUNT(respondent_id) FROM fact_survey_responses) * 100), 2) AS age_percentage
+    FROM age
+)
+SELECT age, age_count, age_percentage
+FROM age1;
+
+-- 3. Which type of marketing reaches the most youth (15-30)?
+SELECT marketing_channels, COUNT(respondent_id) AS marketing_channels_counts
+FROM fact_survey_responses
+GROUP BY marketing_channels
+ORDER BY marketing_channels_counts DESC;
+
+-- 4. Preferred ingredients of energy drinks among respondents
+SELECT Ingredients_expected, COUNT(Ingredients_expected) AS preferred_ingredients
+FROM fact_survey_responses
+GROUP BY Ingredients_expected
+ORDER BY preferred_ingredients DESC;
+
+-- 5. Packaging preferences for energy drinks
+SELECT Packaging_preference, COUNT(Packaging_preference) AS preferred_packaging
+FROM fact_survey_responses
+GROUP BY Packaging_preference
+ORDER BY preferred_packaging DESC;
+
+-- 6. Current market leaders
+SELECT Current_brands, COUNT(Current_brands) AS curbrand
+FROM fact_survey_responses
+GROUP BY Current_brands
+ORDER BY curbrand DESC;
+
+-- 7. Primary reasons consumers prefer those brands
+WITH reason AS (
+    SELECT 
+        Reasons_for_choosing_brands, 
+        COUNT(Reasons_for_choosing_brands) AS Reasons
+    FROM fact_survey_responses
+    GROUP BY Reasons_for_choosing_brands
+),
+reason1 AS (
+    SELECT 
+        Reasons_for_choosing_brands, 
+        Reasons, 
+        ROUND((Reasons / (SELECT COUNT(response_id) FROM fact_survey_responses) * 100), 2) AS response_count_percent
+    FROM reason
+)
+SELECT 
+    Reasons_for_choosing_brands, 
+    Reasons, 
+    CONCAT(response_count_percent, '%') AS response_count_percent
+FROM reason1
+ORDER BY Reasons DESC;
+
+-- 8. Marketing channel with the most reach
+WITH marketing AS (
+    SELECT Marketing_channels, COUNT(Marketing_channels) AS marketing_channels_count
+    FROM fact_survey_responses
+    GROUP BY Marketing_channels
+),
+marketing1 AS (
+    SELECT 
+        Marketing_channels, 
+        marketing_channels_count, 
+        ROUND((marketing_channels_count / (SELECT COUNT(response_id) FROM fact_survey_responses) * 100), 2) AS channel_percent
+    FROM marketing
+)
+SELECT Marketing_channels, marketing_channels_count, CONCAT(channel_percent, '%') AS marketing_channel_percentage
+FROM marketing1
+ORDER BY marketing_channels_count DESC;
+
+-- 9. Customer opinions on the brand
+SELECT AVG(taste_experience) AS avg_rating
+FROM fact_survey_responses;
+
+-- 10. Cities needing more focus
+SELECT COUNT(fsr.Heard_before) AS heard_about, dc.city
+FROM fact_survey_responses fsr
+JOIN dim_repondents dr ON fsr.respondent_id = dr.respondent_id
+JOIN dim_cities dc ON dr.city_id = dc.city_id
+GROUP BY dc.city
+ORDER BY heard_about DESC;
+
+-- 11. Preferred purchase locations for energy drinks
+SELECT Purchase_location, COUNT(Purchase_location) AS purchase_location
+FROM fact_survey_responses 
+GROUP BY Purchase_location
+ORDER BY purchase_location DESC;
+
+-- 12. Typical consumption situations for energy drinks
+SELECT Typical_consumption_situations, COUNT(Typical_consumption_situations) AS consumption_place
+FROM fact_survey_responses 
+GROUP BY Typical_consumption_situations
+ORDER BY consumption_place DESC;
+
+-- 13. Factors influencing purchase decisions
+SELECT 
+    Limited_edition_packaging, 
+    COUNT(Limited_edition_packaging) AS packaging, 
+    Price_range, 
+    COUNT(Price_range) AS price
+FROM fact_survey_responses 
+GROUP BY Limited_edition_packaging, Price_range
+ORDER BY packaging DESC, price DESC;
